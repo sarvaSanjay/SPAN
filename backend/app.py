@@ -1,7 +1,9 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import login_required, current_user, login_user, logout_user, UserMixin
 
 app = Flask(__name__)
 api = Api(app)
@@ -44,10 +46,50 @@ login_post_args = reqparse.RequestParser()
 login_post_args.add_argument("name", type=str, help="Name of the user is required", required=True)
 login_post_args.add_argument("password", type=str, help="Password required", required=True)
 
+register_post_args = reqparse.RequestParser()
+register_post_args.add_argument("name", type=str, help="Name of the user is required", required=True)
+register_post_args.add_argument("password", type=str, help="Password required", required=True)
+register_post_args.add_argument("confirm-password", type=str, help="Password confirmation required", required=True)
+
 activity_post_args = reqparse.RequestParser()
 activity_post_args.add_argument('name', type= str, help="Name of activity required", required = True)
 activity_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
 activity_post_args.add_argument('description', type = str, help="Description required", required = True)
+
+# Resource fields
+
+# Resources
+class Login(Resource):
+    def post(self):
+        args = login_post_args.parse_args()
+        user = UserModel.query.filter_by(name = args['name']).first()
+        if not user:
+            abort(404, "could not find user")
+        elif not check_password_hash(user.password, args['password']):
+            abort(404, "incorrect password")
+        else:
+            user.date_login = func.now()
+            login_user(user=user, remember= True)
+            resp = {'message': 'login successful'}
+            return jsonify(success=True)
+
+class Register(Resource):
+    def post(self):
+        args = register_post_args.parse_args()
+        user = UserModel.query.filter_by(name = args['name']).first()
+        if user:
+            abort(404, "username already exists")
+        if args['password'] != args['confirm-password']:
+            abort(404, "passwords do not match")
+        new_user = UserModel(name = args['name'], password = args['password'], )
+        db.session.add(new_user)
+        db.session.commit(new_user)
+        login_user(user = user, remember= True)
+        return jsonify(success=True)
+
+api.add_resource(Login, "/login")
+api.add_resource(Register, "/register")
+
 if __name__ == '__main__':
     app.run(debug=True)
 
