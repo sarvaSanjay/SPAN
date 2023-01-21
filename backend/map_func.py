@@ -8,6 +8,9 @@ def isclose(curr_position, target_position):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     d = R * c
     distance = d * 1000
-    return distance
+    return distance <= 50
 
-print(isclose((43.6426,79.3871), (43.6426,79.3872)))
+def string_to_tup(string_tup) -> tuple:
+    string_tup = string_tup[1:-1]
+
+    return tuple(map(int, string_tup.split(',')))
