@@ -1,9 +1,11 @@
+from random import randint
 from flask import Flask, jsonify
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_required, current_user, login_user, logout_user, UserMixin, LoginManager
+from map_func import isclose
 
 app = Flask(__name__)
 api = Api(app)
@@ -71,6 +73,12 @@ activity_post_args.add_argument('name', type= str, help="Name of activity requir
 activity_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
 activity_post_args.add_argument('description', type = str, help="Description required", required = True)
 
+history_post_args = reqparse.RequestParser()
+history_post_args.add_argument('activity', type= str, help="Name of activity required", required = True)
+history_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
+history_post_args.add_argument('description', type = str, help="Description required", required = True)
+history_post_args.add_argument('user_id', type = int, help="userid required", required = True)
+
 # Resource fields
 
 activity_resource_fields = {
@@ -79,6 +87,15 @@ activity_resource_fields = {
     'location': fields.String,
     'description': fields.String
 }
+
+history_resource_fields = {
+    'id': fields.Integer,
+    'user-id': fields.Integer,
+    'activity': fields.String,
+    'location': fields.String,
+    'description': fields.String
+}
+
 # Resources
 class Login(Resource):
     def post(self):
@@ -111,9 +128,21 @@ class Register(Resource):
 class Activity(Resource):
     def get(self):
         activities = ActivityModel.query.filter_by().all()
+        rand_id = randint(0, len(activities))
+        rand_activity = ActivityModel.query.filter_by(id = rand_id).first()
+
         return jsonify({'length': len(activities)})
-    def post(self):
-        pass
+
+class History(Resource):
+    @login_required
+    @marshal_with(history_resource_fields)
+    def get(self):
+        history = HistoryModel.query.filter_by(user_id = current_user.id).all()
+        return history
+    @login_required
+    def post(self, location):
+        args = history_post_args.parse_args()
+        isclose
 
 class ActivityAdder(Resource):
     def post(self):
@@ -132,6 +161,7 @@ api.add_resource(Login, "/login")
 api.add_resource(Register, "/register")
 api.add_resource(ActivityAdder, "/addactivity")
 api.add_resource(Activity, "/activity")
+api.add_resource(History, '/history')
 
 if __name__ == '__main__':
     app.run(debug=True)

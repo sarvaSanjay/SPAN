@@ -14,3 +14,4 @@ def string_to_tup(string_tup) -> tuple:
     string_tup = string_tup[1:-1]
 
     return tuple(map(int, string_tup.split(',')))
+
