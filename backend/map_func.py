@@ -9,5 +9,3 @@ def isclose(curr_position, target_position):
     d = R * c
     distance = d * 1000
     return distance
-
-print(isclose((43.6426,79.3871), (43.6426,79.3872)))
