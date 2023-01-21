@@ -14,6 +14,8 @@ class UserModel(db.Model):
     name = db.Column(db.String(100), nullable = False)
     password = db.Column(db.String(150), nullable = False)
     current_activity = db.Column(db.String(200))
+    date_login = db.Column(db.DateTime())
+    score = db.Column(db.Integer, default = 0)
 
     def __repr__(self) -> str:
         return f"User(name={self.name})"
@@ -36,6 +38,16 @@ class ActivityModel(db.Model):
     def __repr__(self) -> str:
         return f'Activity(name = {self.name}, location = {self.location}, description = {self.description})'
 
+# Defining the main request parsers
+
+login_post_args = reqparse.RequestParser()
+login_post_args.add_argument("name", type=str, help="Name of the user is required", required=True)
+login_post_args.add_argument("password", type=str, help="Password required", required=True)
+
+activity_post_args = reqparse.RequestParser()
+activity_post_args.add_argument('name', type= str, help="Name of activity required", required = True)
+activity_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
+activity_post_args.add_argument('description', type = str, help="Description required", required = True)
 if __name__ == '__main__':
     app.run(debug=True)
 
