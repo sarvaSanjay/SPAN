@@ -14,8 +14,8 @@ app = Flask(__name__)
 api = Api(app)
 app.config['SECRET_KEY'] = 'asdfghjkl'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-db = SQLAlchemy(app)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 db.init_app(app)
 
 login_manager = LoginManager()
