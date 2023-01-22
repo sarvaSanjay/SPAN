@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_required, current_user, login_user, logout_user, UserMixin, LoginManager
 from map_func import isclose, string_to_tup
 import datetime
+import requests
 
 app = Flask(__name__)
 api = Api(app)
@@ -73,6 +74,9 @@ activity_post_args = reqparse.RequestParser()
 activity_post_args.add_argument('name', type= str, help="Name of activity required", required = True)
 activity_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
 activity_post_args.add_argument('description', type = str, help="Description required", required = True)
+
+user_post_args = reqparse.RequestParser()
+user_post_args.add_argument("image", type=str, help="Base64 encoded image string", required=True, location='json')
 
 # Resource fields
 
@@ -165,6 +169,25 @@ class ActivityAdder(Resource):
     def get(self):
         activities = ActivityModel.query.filter_by().all()
         return activities
+
+class UserPost(Resource):
+    def post(self):
+        image = user_post_args.parse_args(strict=True).get("image", None)
+
+        if image:
+            import base64
+            with open("new_image.jpg","wb") as new_file:
+                new_file.write(base64.decodebytes(image))
+            url = "//api.estuary.tech/content/add"
+            payload={}
+            files = [('data',('file', open('new_image.jpg','rb'),'application/octet-stream'))]
+            headers = {'Accept': 'application/json','Authorization': 'Bearer EST44af082e-cf73-4b71-bc2d-fe8f00cb7671ARY'}
+            response = requests.request("POST", url, headers=headers, data=payload,files = files)
+
+            return jsonify(success = True)
+        else:
+       		return jsonify(success = False)
+    
 
 api.add_resource(Login, "/login")
 api.add_resource(Register, "/register")
