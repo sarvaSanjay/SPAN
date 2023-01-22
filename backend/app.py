@@ -147,7 +147,7 @@ class History(Resource):
         history = HistoryModel.query.filter_by(user_id = current_user.id).all()
         return history
     @login_required
-    def post(self, location):
+    def post(self):
         activity = ActivityModel.query.filter_by(name = current_user.current_activity)
         image = image_post_args.parse_args(strict=True).get("image", None)
         location = image_post_args.parse_args()['location']
