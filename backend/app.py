@@ -79,6 +79,7 @@ activity_post_args.add_argument('description', type = str, help="Description req
 
 image_post_args = reqparse.RequestParser()
 image_post_args.add_argument("image", type=str, help="Base64 encoded image string", required=True, location='json')
+image_post_args.add_argument('location', type=list, help = "location is required")
 
 # Resource fields
 
@@ -130,9 +131,7 @@ class Activity(Resource):
     @login_required
     @marshal_with(activity_resource_fields)
     def get(self):
-        print(current_user.date_login)
         if not current_user.date_login or datetime.datetime.now().strftime('%d/%m/%Y') != current_user.date_login.strftime('%d/%m/%Y'):
-            print(current_user.date_login)
             activities = ActivityModel.query.filter_by().all()
             rand_id = randint(0, len(activities))
             rand_activity = ActivityModel.query.filter_by(id = rand_id).first()
@@ -151,6 +150,7 @@ class History(Resource):
     def post(self, location):
         activity = ActivityModel.query.filter_by(name = current_user.current_activity)
         image = image_post_args.parse_args(strict=True).get("image", None)
+        location = image_post_args.parse_args()['location']
         if isclose(location, string_to_tup(activity.location)):
             with open("new_image.jpg","wb") as new_file:
                 new_file.write(base64.decodebytes(image))

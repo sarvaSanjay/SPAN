@@ -4,7 +4,7 @@ BASE = "http://127.0.0.1:5000/"
 
 s = requests.Session()
 response = s.post(BASE + "/login", {'name': 'shregory', 'password': 'hello'})
-response = s.get(BASE + "/activity")
+response = s.get(BASE + "/history")
 
 # response = requests.post(BASE + "/addactivity", {'name': 'CN Tower', 'location': '(43.6426,79.3871)', 'description': 'Pay a visit to the most iconic building in Toronto. Enjoy the panoramic views from the top of the tower and take a picture!'})
 # response = requests.post(BASE + "/addactivity", {'name': 'Distillery District', 'location': '(43.6503,79.3596)', 'description': 'an internationally acclaimed village of brick-lined streets and dozens of vibrantly restored Victorian Industrial buildings. It’s one of Ontario’s hottest tourist attractions and home to live theatres, galleries, fashion, design and jewelry boutiques, unique cafes and award-winning restaurants. Don\'t forget to get some hot chocolate and take a picture!'})
