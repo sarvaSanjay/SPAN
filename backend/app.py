@@ -8,6 +8,7 @@ from flask_login import login_required, current_user, login_user, logout_user, U
 from map_func import isclose, string_to_tup
 import datetime
 import requests
+import base64
 
 app = Flask(__name__)
 api = Api(app)
@@ -43,6 +44,7 @@ class HistoryModel(db.Model):
     activity = db.Column(db.String(200), nullable = False)
     location = db.Column(db.String(200), nullable = False)
     date_complete = db.Column(db.DateTime(timezone = True), default = func.now())
+    image_url = db.Column(db.String(300), nullable = False)
 
     def __repr__(self) -> str:
         return f'History(activity = {self.activity}, location = {self.location}, date_complete = {self.date_complete})'
@@ -75,8 +77,8 @@ activity_post_args.add_argument('name', type= str, help="Name of activity requir
 activity_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
 activity_post_args.add_argument('description', type = str, help="Description required", required = True)
 
-user_post_args = reqparse.RequestParser()
-user_post_args.add_argument("image", type=str, help="Base64 encoded image string", required=True, location='json')
+image_post_args = reqparse.RequestParser()
+image_post_args.add_argument("image", type=str, help="Base64 encoded image string", required=True, location='json')
 
 # Resource fields
 
@@ -92,7 +94,8 @@ history_resource_fields = {
     'user-id': fields.Integer,
     'activity': fields.String,
     'location': fields.String,
-    'description': fields.String
+    'description': fields.String,
+    'image-url': fields.String
 }
 
 # Resources
@@ -147,8 +150,17 @@ class History(Resource):
     @login_required
     def post(self, location):
         activity = ActivityModel.query.filter_by(name = current_user.current_activity)
+        image = image_post_args.parse_args(strict=True).get("image", None)
         if isclose(location, string_to_tup(activity.location)):
-            new_history = HistoryModel(user_id = current_user.id, activity = activity.name, location = activity.location, description = activity.description)
+            with open("new_image.jpg","wb") as new_file:
+                new_file.write(base64.decodebytes(image))
+            url = "//api.estuary.tech/content/add"
+            payload={}
+            files = [('data',('file', open('new_image.jpg','rb'),'application/octet-stream'))]
+            headers = {'Accept': 'application/json','Authorization': 'Bearer EST44af082e-cf73-4b71-bc2d-fe8f00cb7671ARY'}
+            response = requests.request("POST", url, headers=headers, data=payload,files = files)
+            url = "https://gateway.estuary.tech/gw/ipfs/" + response['cid']
+            new_history = HistoryModel(user_id = current_user.id, activity = activity.name, location = activity.location, description = activity.description, image_url = url)
             current_user.score += 50
             db.session.add(new_history)
             db.session.commit()
@@ -168,26 +180,7 @@ class ActivityAdder(Resource):
     @marshal_with(activity_resource_fields)
     def get(self):
         activities = ActivityModel.query.filter_by().all()
-        return activities
-
-class UserPost(Resource):
-    def post(self):
-        image = user_post_args.parse_args(strict=True).get("image", None)
-
-        if image:
-            import base64
-            with open("new_image.jpg","wb") as new_file:
-                new_file.write(base64.decodebytes(image))
-            url = "//api.estuary.tech/content/add"
-            payload={}
-            files = [('data',('file', open('new_image.jpg','rb'),'application/octet-stream'))]
-            headers = {'Accept': 'application/json','Authorization': 'Bearer EST44af082e-cf73-4b71-bc2d-fe8f00cb7671ARY'}
-            response = requests.request("POST", url, headers=headers, data=payload,files = files)
-
-            return jsonify(success = True)
-        else:
-       		return jsonify(success = False)
-    
+        return activities  
 
 api.add_resource(Login, "/login")
 api.add_resource(Register, "/register")
