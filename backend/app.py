@@ -5,7 +5,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_required, current_user, login_user, logout_user, UserMixin, LoginManager
-from map_func import isclose
+from map_func import isclose, string_to_tup
+import datetime
 
 app = Flask(__name__)
 api = Api(app)
@@ -29,7 +30,7 @@ class UserModel(db.Model, UserMixin):
     name = db.Column(db.String(100), nullable = False)
     password = db.Column(db.String(150), nullable = False)
     current_activity = db.Column(db.String(200))
-    date_login = db.Column(db.DateTime())
+    date_login = db.Column(db.DateTime(), default = None)
     score = db.Column(db.Integer, default = 0)
 
     def __repr__(self) -> str:
@@ -73,12 +74,6 @@ activity_post_args.add_argument('name', type= str, help="Name of activity requir
 activity_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
 activity_post_args.add_argument('description', type = str, help="Description required", required = True)
 
-history_post_args = reqparse.RequestParser()
-history_post_args.add_argument('activity', type= str, help="Name of activity required", required = True)
-history_post_args.add_argument('location', type= str, help="Location of activity required", required = True)
-history_post_args.add_argument('description', type = str, help="Description required", required = True)
-history_post_args.add_argument('user_id', type = int, help="userid required", required = True)
-
 # Resource fields
 
 activity_resource_fields = {
@@ -106,9 +101,8 @@ class Login(Resource):
         elif not check_password_hash(user.password, args['password']):
             abort(404, message="incorrect password")
         else:
-            user.date_login = func.now()
             login_user(user=user, remember= True)
-            resp = {'message': 'login successful'}
+            print(current_user.date_login)
             return jsonify(success=True)
 
 class Register(Resource):
@@ -126,12 +120,19 @@ class Register(Resource):
         return jsonify(success=True)
 
 class Activity(Resource):
+    @login_required
+    @marshal_with(activity_resource_fields)
     def get(self):
-        activities = ActivityModel.query.filter_by().all()
-        rand_id = randint(0, len(activities))
-        rand_activity = ActivityModel.query.filter_by(id = rand_id).first()
-
-        return jsonify({'length': len(activities)})
+        print(current_user.date_login)
+        if not current_user.date_login or datetime.datetime.now().strftime('%d/%m/%Y') != current_user.date_login.strftime('%d/%m/%Y'):
+            print(current_user.date_login)
+            activities = ActivityModel.query.filter_by().all()
+            rand_id = randint(0, len(activities))
+            rand_activity = ActivityModel.query.filter_by(id = rand_id).first()
+            current_user.current_activity = rand_activity.name
+            current_user.date_login = func.now()
+            db.session.commit()
+        return ActivityModel.query.filter_by(name = current_user.current_activity).first()
 
 class History(Resource):
     @login_required
@@ -141,8 +142,16 @@ class History(Resource):
         return history
     @login_required
     def post(self, location):
-        args = history_post_args.parse_args()
-        isclose
+        activity = ActivityModel.query.filter_by(name = current_user.current_activity)
+        if isclose(location, string_to_tup(activity.location)):
+            new_history = HistoryModel(user_id = current_user.id, activity = activity.name, location = activity.location, description = activity.description)
+            current_user.score += 50
+            db.session.add(new_history)
+            db.session.commit()
+            return jsonify(success = True)
+        else:
+            return abort(404, message = "Not close to location")
+
 
 class ActivityAdder(Resource):
     def post(self):
